@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        POETRY_VIRTUALENVS_CREATE = "false"
+        VENV = "venv"
     }
 
     stages {
@@ -13,11 +13,13 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Virtual Environment & Install Dependencies') {
             steps {
                 sh '''
-                python3 -m pip install --upgrade pip
-                pip3 install poetry
+                python3 -m venv $VENV
+                . $VENV/bin/activate
+                pip install --upgrade pip
+                pip install poetry
                 poetry install
                 '''
             }
@@ -25,25 +27,37 @@ pipeline {
 
         stage('Run Flake8') {
             steps {
-                sh 'poetry run flake8 .'
+                sh '''
+                . $VENV/bin/activate
+                poetry run flake8 .
+                '''
             }
         }
 
         stage('Run Pylint') {
             steps {
-                sh 'poetry run pylint $(find . -name "*.py")'
+                sh '''
+                . $VENV/bin/activate
+                poetry run pylint $(find . -name "*.py")
+                '''
             }
         }
 
-        stage('Run Bandit') {
+        stage('Run Bandit (Security Scan)') {
             steps {
-                sh 'poetry run bandit -r .'
+                sh '''
+                . $VENV/bin/activate
+                poetry run bandit -r .
+                '''
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Pytest') {
             steps {
-                sh 'poetry run pytest --maxfail=1 --disable-warnings --tb=short'
+                sh '''
+                . $VENV/bin/activate
+                poetry run pytest --maxfail=1 --disable-warnings --tb=short
+                '''
             }
         }
     }
@@ -53,7 +67,7 @@ pipeline {
             echo "CI Pipeline Finished"
         }
         success {
-            echo "Build Passed "
+            echo "Build Passed"
         }
         failure {
             echo "Build Failed "
