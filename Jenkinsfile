@@ -1,56 +1,60 @@
 pipeline {
     agent any
 
+    environment {
+        VENV = "venv"
+    }
+
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/OT-MICROSERVICES/attendance-api.git'
+                git branch: 'main', url: 'https://github.com/Gagan543-ui/Static-code-analysis.md.git'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Python Environment') {
             steps {
                 sh '''
-                python3 -m venv venv
-                . venv/bin/activate
+                python3 -m venv $VENV
+                . $VENV/bin/activate
                 pip install --upgrade pip
                 pip install flake8 pylint bandit pytest
                 '''
             }
         }
 
-        stage('Flake8 Check') {
+        stage('Run Flake8') {
             steps {
                 sh '''
-                . venv/bin/activate
+                . $VENV/bin/activate
                 flake8 .
                 '''
             }
         }
 
-        stage('Pylint Check') {
+        stage('Run Pylint') {
             steps {
                 sh '''
-                . venv/bin/activate
+                . $VENV/bin/activate
                 pylint $(find . -name "*.py") || true
                 '''
             }
         }
 
-        stage('Bandit Security Check') {
+        stage('Run Bandit') {
             steps {
                 sh '''
-                . venv/bin/activate
+                . $VENV/bin/activate
                 bandit -r .
                 '''
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Pytest') {
             steps {
                 sh '''
-                . venv/bin/activate
+                . $VENV/bin/activate
                 pytest || true
                 '''
             }
