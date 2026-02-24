@@ -2,62 +2,61 @@ pipeline {
     agent any
 
     environment {
-        VENV = "venv"
+        POETRY_VIRTUALENVS_CREATE = "false"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Gagan543-ui/Static-code-analysis.md.git'
+                checkout scm
             }
         }
 
-        stage('Setup Python Environment') {
+        stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 -m venv $VENV
-                . $VENV/bin/activate
-                pip install --upgrade pip
-                pip install flake8 pylint bandit pytest
+                python3 -m pip install --upgrade pip
+                pip3 install poetry
+                poetry install
                 '''
             }
         }
 
         stage('Run Flake8') {
             steps {
-                sh '''
-                . $VENV/bin/activate
-                flake8 .
-                '''
+                sh 'poetry run flake8 .'
             }
         }
 
         stage('Run Pylint') {
             steps {
-                sh '''
-                . $VENV/bin/activate
-                pylint $(find . -name "*.py") || true
-                '''
+                sh 'poetry run pylint $(find . -name "*.py")'
             }
         }
 
         stage('Run Bandit') {
             steps {
-                sh '''
-                . $VENV/bin/activate
-                bandit -r .
-                '''
+                sh 'poetry run bandit -r .'
             }
         }
 
-        stage('Run Pytest') {
+        stage('Run Tests') {
             steps {
-                sh '''
-                . $VENV/bin/activate
-                pytest || true
-                '''
+                sh 'poetry run pytest --maxfail=1 --disable-warnings --tb=short'
             }
+        }
+    }
+
+    post {
+        always {
+            echo "CI Pipeline Finished"
+        }
+        success {
+            echo "Build Passed "
+        }
+        failure {
+            echo "Build Failed "
         }
     }
 }
