@@ -2,60 +2,59 @@ pipeline {
     agent any
 
     environment {
-        VENV = "venv"
+        POETRY_VIRTUALENVS_CREATE = "true"
+        POETRY_NO_INTERACTION = "1"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Setup Virtual Environment & Install Dependencies') {
+        stage('Install Poetry') {
             steps {
                 sh '''
-                python3 -m venv $VENV
-                . $VENV/bin/activate
-                pip install --upgrade pip
-                pip install poetry
+                curl -sSL https://install.python-poetry.org | python3 -
+                export PATH="$HOME/.local/bin:$PATH"
+                poetry --version
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                export PATH="$HOME/.local/bin:$PATH"
                 poetry install
                 '''
             }
         }
 
-        stage('Run Flake8') {
+        stage('Static Code Analysis') {
             steps {
                 sh '''
-                . $VENV/bin/activate
-                poetry run flake8 .
+                export PATH="$HOME/.local/bin:$PATH"
+
+                poetry run flake8 app.py router models client utils
+
+                poetry run pylint app.py router models client utils --fail-under=7
+
+                poetry run bandit -r app.py router models client utils
+
+                poetry run mypy app.py router models client utils
+
+                poetry run pip-audit
                 '''
             }
         }
 
-        stage('Run Pylint') {
+        stage('Run Tests') {
             steps {
                 sh '''
-                . $VENV/bin/activate
-                poetry run pylint $(find . -name "*.py")
-                '''
-            }
-        }
-
-        stage('Run Bandit (Security Scan)') {
-            steps {
-                sh '''
-                . $VENV/bin/activate
-                poetry run bandit -r .
-                '''
-            }
-        }
-
-        stage('Run Pytest') {
-            steps {
-                sh '''
-                . $VENV/bin/activate
+                export PATH="$HOME/.local/bin:$PATH"
                 poetry run pytest --maxfail=1 --disable-warnings --tb=short
                 '''
             }
@@ -63,14 +62,11 @@ pipeline {
     }
 
     post {
-        always {
-            echo "CI Pipeline Finished"
-        }
         success {
-            echo "Build Passed"
+            echo 'Build Passed – Quality Gate Satisfied'
         }
         failure {
-            echo "Build Failed "
+            echo 'Build Failed – Fix Issues Before Merge'
         }
     }
 }
