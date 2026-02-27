@@ -17,6 +17,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
+                poetry env use /usr/bin/python3.11
                 poetry install
                 '''
             }
@@ -26,13 +27,9 @@ pipeline {
             steps {
                 sh '''
                 poetry run flake8 app.py router models client utils
-
                 poetry run pylint app.py router models client utils --fail-under=7
-
                 poetry run bandit -r app.py router models client utils -ll
-
                 poetry run mypy app.py router models client utils
-
                 poetry run pip-audit
                 '''
             }
