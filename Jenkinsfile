@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        PATH = "$HOME/.local/bin:$PATH"
         POETRY_NO_INTERACTION = "1"
     }
 
@@ -14,11 +13,23 @@ pipeline {
             }
         }
 
+        stage('Setup Python 3.11 Environment') {
+            steps {
+                sh '''
+                python3.11 -m venv .venv
+                . .venv/bin/activate
+                pip install --upgrade pip
+                pip install poetry
+                poetry --version
+                '''
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 sh '''
-                poetry env use /usr/bin/python3.11
-                poetry install
+                . .venv/bin/activate
+                poetry install --no-root
                 '''
             }
         }
@@ -26,6 +37,7 @@ pipeline {
         stage('Static Code Analysis') {
             steps {
                 sh '''
+                . .venv/bin/activate
                 poetry run flake8 app.py router models client utils
                 poetry run pylint app.py router models client utils --fail-under=7
                 poetry run bandit -r app.py router models client utils -ll
@@ -38,6 +50,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
+                . .venv/bin/activate
                 poetry run pytest --maxfail=1 --disable-warnings --tb=short
                 '''
             }
