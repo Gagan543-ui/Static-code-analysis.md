@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        POETRY_VIRTUALENVS_CREATE = "true"
+        PATH = "$HOME/.local/bin:$PATH"
         POETRY_NO_INTERACTION = "1"
     }
 
@@ -14,20 +14,9 @@ pipeline {
             }
         }
 
-        stage('Install Poetry') {
-            steps {
-                sh '''
-                curl -sSL https://install.python-poetry.org | python3 -
-                export PATH="$HOME/.local/bin:$PATH"
-                poetry --version
-                '''
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 sh '''
-                export PATH="$HOME/.local/bin:$PATH"
                 poetry install
                 '''
             }
@@ -36,13 +25,11 @@ pipeline {
         stage('Static Code Analysis') {
             steps {
                 sh '''
-                export PATH="$HOME/.local/bin:$PATH"
-
                 poetry run flake8 app.py router models client utils
 
                 poetry run pylint app.py router models client utils --fail-under=7
 
-                poetry run bandit -r app.py router models client utils
+                poetry run bandit -r app.py router models client utils -ll
 
                 poetry run mypy app.py router models client utils
 
@@ -54,7 +41,6 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                export PATH="$HOME/.local/bin:$PATH"
                 poetry run pytest --maxfail=1 --disable-warnings --tb=short
                 '''
             }
@@ -63,7 +49,7 @@ pipeline {
 
     post {
         success {
-            echo 'Build Passed – Quality Gate Satisfied'
+            echo 'Build Passed – Quality Gate Achieved'
         }
         failure {
             echo 'Build Failed – Fix Issues Before Merge'
